@@ -6,14 +6,20 @@ const overlayTitle = document.getElementById("overlayTitle");
 const overlayScore = document.getElementById("overlayScore");
 const gameContainer = document.querySelector(".game-container");
 
-const BASE = {
-  gravity: 0.32,
-  jumpForce: -5.5,
-  maxFallSpeed: 4.5,
-  pipeSpeed: 2.2,
-  pipeGap: 200,
-  pipeWidth: 52,
-  pipeSpawnInterval: 100,
+// 새 물리: 점수와 무관하게 항상 동일
+const BIRD = {
+  gravity: 0.25,
+  jumpForce: -5,
+  maxFallSpeed: 4,
+};
+
+// 장애물 속도만 5점마다 증가 (시작은 느리게)
+const PIPE = {
+  startSpeed: 1.35,
+  speedPerLevel: 0.2,
+  gap: 200,
+  width: 52,
+  spawnInterval: 105,
 };
 
 const bird = {
@@ -31,23 +37,12 @@ let gameState = "ready";
 let lastInputTime = 0;
 let lastDifficultyLevel = 0;
 
-function getDifficultyLevel() {
+function getSpeedLevel() {
   return Math.floor(score / 5);
 }
 
-function getDifficulty() {
-  const level = getDifficultyLevel();
-  const speedMul = 1 + level * 0.12;
-
-  return {
-    level,
-    gravity: BASE.gravity * speedMul,
-    jumpForce: BASE.jumpForce * (1 + level * 0.05),
-    maxFallSpeed: BASE.maxFallSpeed * speedMul,
-    pipeSpeed: BASE.pipeSpeed * speedMul,
-    pipeGap: Math.max(165, BASE.pipeGap - level * 6),
-    pipeSpawnInterval: Math.max(72, BASE.pipeSpawnInterval - level * 4),
-  };
+function getPipeSpeed() {
+  return PIPE.startSpeed + getSpeedLevel() * PIPE.speedPerLevel;
 }
 
 function resetGame() {
@@ -71,29 +66,25 @@ function startGame() {
 
 function jump() {
   if (gameState === "playing") {
-    const { jumpForce } = getDifficulty();
-    bird.velocity = jumpForce;
+    bird.velocity = BIRD.jumpForce;
   }
 }
 
 function spawnPipe() {
-  const { pipeGap } = getDifficulty();
   const minTop = 50;
-  const maxTop = canvas.height - pipeGap - 50;
+  const maxTop = canvas.height - PIPE.gap - 50;
   const topHeight = minTop + Math.random() * (maxTop - minTop);
 
   pipes.push({
     x: canvas.width,
     topHeight,
-    pipeGap,
     passed: false,
   });
 }
 
 function updateBird() {
-  const { gravity, maxFallSpeed } = getDifficulty();
-  bird.velocity += gravity;
-  bird.velocity = Math.min(bird.velocity, maxFallSpeed);
+  bird.velocity += BIRD.gravity;
+  bird.velocity = Math.min(bird.velocity, BIRD.maxFallSpeed);
   bird.y += bird.velocity;
 
   if (bird.y + bird.height > canvas.height - 40) {
@@ -107,10 +98,10 @@ function updateBird() {
 }
 
 function updatePipes() {
-  const { pipeSpeed, pipeSpawnInterval } = getDifficulty();
+  const pipeSpeed = getPipeSpeed();
   frameCount++;
 
-  if (frameCount % pipeSpawnInterval === 0) {
+  if (frameCount % PIPE.spawnInterval === 0) {
     spawnPipe();
   }
 
@@ -118,18 +109,18 @@ function updatePipes() {
     const pipe = pipes[i];
     pipe.x -= pipeSpeed;
 
-    if (!pipe.passed && pipe.x + BASE.pipeWidth < bird.x) {
+    if (!pipe.passed && pipe.x + PIPE.width < bird.x) {
       pipe.passed = true;
       score++;
       scoreEl.textContent = score;
 
-      const newLevel = getDifficultyLevel();
+      const newLevel = getSpeedLevel();
       if (newLevel > lastDifficultyLevel) {
         lastDifficultyLevel = newLevel;
       }
     }
 
-    if (pipe.x + BASE.pipeWidth < 0) {
+    if (pipe.x + PIPE.width < 0) {
       pipes.splice(i, 1);
     }
   }
@@ -147,13 +138,12 @@ function checkCollisions() {
   const groundY = canvas.height - 40;
 
   for (const pipe of pipes) {
-    const gap = pipe.pipeGap;
-    const topPipe = { x: pipe.x, y: 0, w: BASE.pipeWidth, h: pipe.topHeight };
+    const topPipe = { x: pipe.x, y: 0, w: PIPE.width, h: pipe.topHeight };
     const bottomPipe = {
       x: pipe.x,
-      y: pipe.topHeight + gap,
-      w: BASE.pipeWidth,
-      h: canvas.height - (pipe.topHeight + gap) - 40,
+      y: pipe.topHeight + PIPE.gap,
+      w: PIPE.width,
+      h: canvas.height - (pipe.topHeight + PIPE.gap) - 40,
     };
 
     if (
@@ -215,30 +205,29 @@ function drawPipes() {
   ctx.lineWidth = 3;
 
   for (const pipe of pipes) {
-    const gap = pipe.pipeGap;
-    ctx.fillRect(pipe.x, 0, BASE.pipeWidth, pipe.topHeight);
-    ctx.strokeRect(pipe.x, 0, BASE.pipeWidth, pipe.topHeight);
-    ctx.fillRect(pipe.x - 4, pipe.topHeight - 24, BASE.pipeWidth + 8, 24);
-    ctx.strokeRect(pipe.x - 4, pipe.topHeight - 24, BASE.pipeWidth + 8, 24);
+    ctx.fillRect(pipe.x, 0, PIPE.width, pipe.topHeight);
+    ctx.strokeRect(pipe.x, 0, PIPE.width, pipe.topHeight);
+    ctx.fillRect(pipe.x - 4, pipe.topHeight - 24, PIPE.width + 8, 24);
+    ctx.strokeRect(pipe.x - 4, pipe.topHeight - 24, PIPE.width + 8, 24);
 
-    const bottomY = pipe.topHeight + gap;
+    const bottomY = pipe.topHeight + PIPE.gap;
     const bottomH = canvas.height - bottomY - 40;
-    ctx.fillRect(pipe.x, bottomY, BASE.pipeWidth, bottomH);
-    ctx.strokeRect(pipe.x, bottomY, BASE.pipeWidth, bottomH);
-    ctx.fillRect(pipe.x - 4, bottomY, BASE.pipeWidth + 8, 24);
-    ctx.strokeRect(pipe.x - 4, bottomY, BASE.pipeWidth + 8, 24);
+    ctx.fillRect(pipe.x, bottomY, PIPE.width, bottomH);
+    ctx.strokeRect(pipe.x, bottomY, PIPE.width, bottomH);
+    ctx.fillRect(pipe.x - 4, bottomY, PIPE.width + 8, 24);
+    ctx.strokeRect(pipe.x - 4, bottomY, PIPE.width + 8, 24);
   }
 }
 
 function drawHud() {
   if (gameState !== "playing") return;
 
-  const { level } = getDifficulty();
+  const level = getSpeedLevel();
   if (level > 0) {
     ctx.fillStyle = "rgba(255,255,255,0.9)";
     ctx.font = "bold 14px sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText(`속도 Lv.${level + 1}`, canvas.width / 2, 52);
+    ctx.fillText(`파이프 속도 Lv.${level + 1}`, canvas.width / 2, 52);
   }
 }
 
@@ -250,7 +239,7 @@ function drawReadyScreen() {
   ctx.font = "16px sans-serif";
   ctx.fillText("탭 또는 스페이스바로 시작", canvas.width / 2, canvas.height / 2);
   ctx.font = "13px sans-serif";
-  ctx.fillText("5점마다 속도 증가", canvas.width / 2, canvas.height / 2 + 28);
+  ctx.fillText("5점마다 파이프만 빨라짐", canvas.width / 2, canvas.height / 2 + 28);
 }
 
 function gameLoop() {
