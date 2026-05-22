@@ -1,0 +1,81 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(180deg, #4ec0ca 0%, #87ceeb 60%, #ded895 100%);
+  font-family: "Segoe UI", Tahoma, sans-serif;
+}
+
+.game-container {
+  position: relative;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+#gameCanvas {
+  display: block;
+  background: #70c5ce;
+}
+
+.score-display {
+  position: absolute;
+  top: 16px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 28px;
+  font-weight: bold;
+  color: white;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+}
+
+.instructions {
+  position: absolute;
+  bottom: 12px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.9);
+  pointer-events: none;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+}
+
+.overlay.hidden {
+  display: none;
+}
+
+.overlay h2 {
+  font-size: 36px;
+  margin-bottom: 12px;
+}
+
+.overlay p {
+  font-size: 18px;
+  margin: 4px 0;
+}
+
+.overlay .hint {
+  margin-top: 16px;
+  font-size: 14px;
+  opacity: 0.8;
+}

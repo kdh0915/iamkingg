@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flappy Bird</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="game-container">
+    <canvas id="gameCanvas" width="400" height="600"></canvas>
+    <div id="overlay" class="overlay hidden">
+      <h2 id="overlayTitle">Game Over</h2>
+      <p id="overlayScore">Score: 0</p>
+      <p class="hint">스페이스바로 다시 시작</p>
+    </div>
+    <p class="score-display">Score: <span id="score">0</span></p>
+    <p class="instructions">스페이스바: 점프 / 시작</p>
+  </div>
+  <script src="game.js"></script>
+</body>
+</html>
