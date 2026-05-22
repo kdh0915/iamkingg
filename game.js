@@ -4,14 +4,17 @@ const scoreEl = document.getElementById("score");
 const overlay = document.getElementById("overlay");
 const overlayTitle = document.getElementById("overlayTitle");
 const overlayScore = document.getElementById("overlayScore");
+const gameContainer = document.querySelector(".game-container");
 
-const GRAVITY = 0.18;
-const JUMP_FORCE = -4.2;
-const MAX_FALL_SPEED = 3.2;
-const PIPE_SPEED = 1.4;
-const PIPE_GAP = 200;
-const PIPE_WIDTH = 52;
-const PIPE_SPAWN_INTERVAL = 110;
+const BASE = {
+  gravity: 0.32,
+  jumpForce: -5.5,
+  maxFallSpeed: 4.5,
+  pipeSpeed: 2.2,
+  pipeGap: 200,
+  pipeWidth: 52,
+  pipeSpawnInterval: 100,
+};
 
 const bird = {
   x: 80,
@@ -25,6 +28,27 @@ let pipes = [];
 let frameCount = 0;
 let score = 0;
 let gameState = "ready";
+let lastInputTime = 0;
+let lastDifficultyLevel = 0;
+
+function getDifficultyLevel() {
+  return Math.floor(score / 5);
+}
+
+function getDifficulty() {
+  const level = getDifficultyLevel();
+  const speedMul = 1 + level * 0.12;
+
+  return {
+    level,
+    gravity: BASE.gravity * speedMul,
+    jumpForce: BASE.jumpForce * (1 + level * 0.05),
+    maxFallSpeed: BASE.maxFallSpeed * speedMul,
+    pipeSpeed: BASE.pipeSpeed * speedMul,
+    pipeGap: Math.max(165, BASE.pipeGap - level * 6),
+    pipeSpawnInterval: Math.max(72, BASE.pipeSpawnInterval - level * 4),
+  };
+}
 
 function resetGame() {
   bird.y = canvas.height / 2;
@@ -32,6 +56,7 @@ function resetGame() {
   pipes = [];
   frameCount = 0;
   score = 0;
+  lastDifficultyLevel = 0;
   scoreEl.textContent = "0";
   overlay.classList.add("hidden");
 }
@@ -46,25 +71,29 @@ function startGame() {
 
 function jump() {
   if (gameState === "playing") {
-    bird.velocity = JUMP_FORCE;
+    const { jumpForce } = getDifficulty();
+    bird.velocity = jumpForce;
   }
 }
 
 function spawnPipe() {
+  const { pipeGap } = getDifficulty();
   const minTop = 50;
-  const maxTop = canvas.height - PIPE_GAP - 50;
+  const maxTop = canvas.height - pipeGap - 50;
   const topHeight = minTop + Math.random() * (maxTop - minTop);
 
   pipes.push({
     x: canvas.width,
     topHeight,
+    pipeGap,
     passed: false,
   });
 }
 
 function updateBird() {
-  bird.velocity += GRAVITY;
-  bird.velocity = Math.min(bird.velocity, MAX_FALL_SPEED);
+  const { gravity, maxFallSpeed } = getDifficulty();
+  bird.velocity += gravity;
+  bird.velocity = Math.min(bird.velocity, maxFallSpeed);
   bird.y += bird.velocity;
 
   if (bird.y + bird.height > canvas.height - 40) {
@@ -78,22 +107,29 @@ function updateBird() {
 }
 
 function updatePipes() {
+  const { pipeSpeed, pipeSpawnInterval } = getDifficulty();
   frameCount++;
-  if (frameCount % PIPE_SPAWN_INTERVAL === 0) {
+
+  if (frameCount % pipeSpawnInterval === 0) {
     spawnPipe();
   }
 
   for (let i = pipes.length - 1; i >= 0; i--) {
     const pipe = pipes[i];
-    pipe.x -= PIPE_SPEED;
+    pipe.x -= pipeSpeed;
 
-    if (!pipe.passed && pipe.x + PIPE_WIDTH < bird.x) {
+    if (!pipe.passed && pipe.x + BASE.pipeWidth < bird.x) {
       pipe.passed = true;
       score++;
       scoreEl.textContent = score;
+
+      const newLevel = getDifficultyLevel();
+      if (newLevel > lastDifficultyLevel) {
+        lastDifficultyLevel = newLevel;
+      }
     }
 
-    if (pipe.x + PIPE_WIDTH < 0) {
+    if (pipe.x + BASE.pipeWidth < 0) {
       pipes.splice(i, 1);
     }
   }
@@ -111,12 +147,13 @@ function checkCollisions() {
   const groundY = canvas.height - 40;
 
   for (const pipe of pipes) {
-    const topPipe = { x: pipe.x, y: 0, w: PIPE_WIDTH, h: pipe.topHeight };
+    const gap = pipe.pipeGap;
+    const topPipe = { x: pipe.x, y: 0, w: BASE.pipeWidth, h: pipe.topHeight };
     const bottomPipe = {
       x: pipe.x,
-      y: pipe.topHeight + PIPE_GAP,
-      w: PIPE_WIDTH,
-      h: canvas.height - (pipe.topHeight + PIPE_GAP) - 40,
+      y: pipe.topHeight + gap,
+      w: BASE.pipeWidth,
+      h: canvas.height - (pipe.topHeight + gap) - 40,
     };
 
     if (
@@ -178,17 +215,30 @@ function drawPipes() {
   ctx.lineWidth = 3;
 
   for (const pipe of pipes) {
-    ctx.fillRect(pipe.x, 0, PIPE_WIDTH, pipe.topHeight);
-    ctx.strokeRect(pipe.x, 0, PIPE_WIDTH, pipe.topHeight);
-    ctx.fillRect(pipe.x - 4, pipe.topHeight - 24, PIPE_WIDTH + 8, 24);
-    ctx.strokeRect(pipe.x - 4, pipe.topHeight - 24, PIPE_WIDTH + 8, 24);
+    const gap = pipe.pipeGap;
+    ctx.fillRect(pipe.x, 0, BASE.pipeWidth, pipe.topHeight);
+    ctx.strokeRect(pipe.x, 0, BASE.pipeWidth, pipe.topHeight);
+    ctx.fillRect(pipe.x - 4, pipe.topHeight - 24, BASE.pipeWidth + 8, 24);
+    ctx.strokeRect(pipe.x - 4, pipe.topHeight - 24, BASE.pipeWidth + 8, 24);
 
-    const bottomY = pipe.topHeight + PIPE_GAP;
+    const bottomY = pipe.topHeight + gap;
     const bottomH = canvas.height - bottomY - 40;
-    ctx.fillRect(pipe.x, bottomY, PIPE_WIDTH, bottomH);
-    ctx.strokeRect(pipe.x, bottomY, PIPE_WIDTH, bottomH);
-    ctx.fillRect(pipe.x - 4, bottomY, PIPE_WIDTH + 8, 24);
-    ctx.strokeRect(pipe.x - 4, bottomY, PIPE_WIDTH + 8, 24);
+    ctx.fillRect(pipe.x, bottomY, BASE.pipeWidth, bottomH);
+    ctx.strokeRect(pipe.x, bottomY, BASE.pipeWidth, bottomH);
+    ctx.fillRect(pipe.x - 4, bottomY, BASE.pipeWidth + 8, 24);
+    ctx.strokeRect(pipe.x - 4, bottomY, BASE.pipeWidth + 8, 24);
+  }
+}
+
+function drawHud() {
+  if (gameState !== "playing") return;
+
+  const { level } = getDifficulty();
+  if (level > 0) {
+    ctx.fillStyle = "rgba(255,255,255,0.9)";
+    ctx.font = "bold 14px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(`속도 Lv.${level + 1}`, canvas.width / 2, 52);
   }
 }
 
@@ -196,9 +246,11 @@ function drawReadyScreen() {
   ctx.fillStyle = "rgba(0,0,0,0.3)";
   ctx.font = "bold 24px sans-serif";
   ctx.textAlign = "center";
-  ctx.fillText("Flappy Bird", canvas.width / 2, canvas.height / 2 - 20);
+  ctx.fillText("Flappy Bird", canvas.width / 2, canvas.height / 2 - 30);
   ctx.font = "16px sans-serif";
-  ctx.fillText("스페이스바로 시작", canvas.width / 2, canvas.height / 2 + 20);
+  ctx.fillText("탭 또는 스페이스바로 시작", canvas.width / 2, canvas.height / 2);
+  ctx.font = "13px sans-serif";
+  ctx.fillText("5점마다 속도 증가", canvas.width / 2, canvas.height / 2 + 28);
 }
 
 function gameLoop() {
@@ -213,6 +265,7 @@ function gameLoop() {
     checkCollisions();
     drawPipes();
     drawBird();
+    drawHud();
   } else if (gameState === "gameover") {
     drawPipes();
     drawBird();
@@ -221,22 +274,11 @@ function gameLoop() {
   requestAnimationFrame(gameLoop);
 }
 
-document.addEventListener("keydown", (e) => {
-  if (e.code === "Space") {
-    e.preventDefault();
-    if (gameState === "ready") {
-      startGame();
-      jump();
-    } else if (gameState === "playing") {
-      jump();
-    } else if (gameState === "gameover") {
-      startGame();
-      jump();
-    }
-  }
-});
+function handleInput() {
+  const now = Date.now();
+  if (now - lastInputTime < 180) return;
+  lastInputTime = now;
 
-canvas.addEventListener("click", () => {
   if (gameState === "ready") {
     startGame();
     jump();
@@ -246,6 +288,29 @@ canvas.addEventListener("click", () => {
     startGame();
     jump();
   }
+}
+
+function bindInput(el) {
+  el.addEventListener("click", handleInput);
+  el.addEventListener(
+    "touchstart",
+    (e) => {
+      e.preventDefault();
+      handleInput();
+    },
+    { passive: false }
+  );
+}
+
+document.addEventListener("keydown", (e) => {
+  if (e.code === "Space") {
+    e.preventDefault();
+    handleInput();
+  }
 });
+
+bindInput(canvas);
+bindInput(overlay);
+bindInput(gameContainer);
 
 gameLoop();

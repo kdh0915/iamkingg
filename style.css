@@ -11,6 +11,8 @@ body {
   align-items: center;
   background: linear-gradient(180deg, #4ec0ca 0%, #87ceeb 60%, #ded895 100%);
   font-family: "Segoe UI", Tahoma, sans-serif;
+  touch-action: manipulation;
+  overscroll-behavior: none;
 }
 
 .game-container {
@@ -18,11 +20,15 @@ body {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   border-radius: 8px;
   overflow: hidden;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
 }
 
 #gameCanvas {
   display: block;
   background: #70c5ce;
+  touch-action: none;
 }
 
 .score-display {
@@ -58,6 +64,9 @@ body {
   align-items: center;
   background: rgba(0, 0, 0, 0.5);
   color: white;
+  touch-action: none;
+  cursor: pointer;
+  z-index: 10;
 }
 
 .overlay.hidden {
