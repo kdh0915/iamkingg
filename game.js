@@ -6,20 +6,20 @@ const overlayTitle = document.getElementById("overlayTitle");
 const overlayScore = document.getElementById("overlayScore");
 const gameContainer = document.querySelector(".game-container");
 
-// 새 물리: 점수와 무관하게 항상 동일
+// 새 중력·점프: 게임 끝날 때까지 절대 변하지 않음
 const BIRD = {
-  gravity: 0.25,
-  jumpForce: -5,
-  maxFallSpeed: 4,
+  gravity: 0.16,
+  jumpForce: -3.8,
+  maxFallSpeed: 2.8,
 };
 
-// 장애물 속도만 5점마다 증가 (시작은 느리게)
+// 파이프 이동 속도만 5점마다 조금씩 증가 (시작은 느리게)
 const PIPE = {
-  startSpeed: 1.35,
-  speedPerLevel: 0.2,
+  startSpeed: 1.0,
+  speedPerLevel: 0.12,
   gap: 200,
   width: 52,
-  spawnInterval: 105,
+  spawnInterval: 115,
 };
 
 const bird = {
@@ -61,6 +61,7 @@ function startGame() {
     resetGame();
     gameState = "playing";
     overlay.classList.add("hidden");
+    canvas.focus();
   }
 }
 
@@ -264,10 +265,6 @@ function gameLoop() {
 }
 
 function handleInput() {
-  const now = Date.now();
-  if (now - lastInputTime < 180) return;
-  lastInputTime = now;
-
   if (gameState === "ready") {
     startGame();
     jump();
@@ -279,27 +276,36 @@ function handleInput() {
   }
 }
 
-function bindInput(el) {
-  el.addEventListener("click", handleInput);
+function handlePointerInput() {
+  const now = Date.now();
+  if (now - lastInputTime < 200) return;
+  lastInputTime = now;
+  handleInput();
+}
+
+function bindPointerInput(el) {
+  el.addEventListener("click", handlePointerInput);
   el.addEventListener(
     "touchstart",
     (e) => {
       e.preventDefault();
-      handleInput();
+      handlePointerInput();
     },
     { passive: false }
   );
 }
 
-document.addEventListener("keydown", (e) => {
-  if (e.code === "Space") {
-    e.preventDefault();
-    handleInput();
-  }
-});
+function onSpaceKey(e) {
+  if (e.code !== "Space" && e.key !== " ") return;
+  e.preventDefault();
+  handleInput();
+}
 
-bindInput(canvas);
-bindInput(overlay);
-bindInput(gameContainer);
+document.addEventListener("keydown", onSpaceKey);
+window.addEventListener("keydown", onSpaceKey);
+
+bindPointerInput(canvas);
+bindPointerInput(overlay);
+bindPointerInput(gameContainer);
 
 gameLoop();
